@@ -17,6 +17,7 @@ package org.springframework.samples.petclinic.vet;
 
 import java.util.List;
 
+import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,9 +36,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 class VetController {
 
+	private final Tracer tracer;
+
 	private final VetRepository vets;
 
-	public VetController(VetRepository clinicService) {
+	public VetController(Tracer tracer, VetRepository clinicService) {
+		this.tracer = tracer;
 		this.vets = clinicService;
 	}
 
@@ -48,6 +52,9 @@ class VetController {
 		Vets vets = new Vets();
 		Page<Vet> paginated = findPaginated(page);
 		vets.getVetList().addAll(paginated.toList());
+		tracer.currentSpan().tag("page", String.valueOf(page));
+		Vet vet = paginated.stream().findFirst().orElse(null);
+		tracer.currentSpan().event("vet1: " + vet.getFirstName() + " " + vet.getLastName());
 		return addPaginationModel(page, paginated, model);
 
 	}
